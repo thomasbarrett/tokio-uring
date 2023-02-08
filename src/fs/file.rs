@@ -181,6 +181,19 @@ impl File {
         op.await
     }
 
+    /// A file/device-specific 16-byte command, akin (but not equivalent) to ioctl(2).
+    pub async fn uring_cmd16(&self, cmd_op: u32, cmd: [u8; 16]) -> io::Result<u32> {
+        let op = Op::uring_cmd16(&self.fd, cmd_op, cmd).unwrap();
+        op.await
+    }
+
+    #[cfg(feature = "sqe128")]
+    /// A file/device-specific 80-byte command, akin (but not equivalent) to ioctl(2).
+    pub async fn uring_cmd80(&self, cmd_op: u32, cmd: [u8; 80]) -> io::Result<u32> {
+        let op = Op::uring_cmd80(&self.fd, cmd_op, cmd).unwrap();
+        op.await
+    }
+
     /// Read some bytes at the specified offset from the file into the specified
     /// array of buffers, returning how many bytes were read.
     ///
@@ -850,8 +863,18 @@ impl File {
     /// }
     /// ```
     pub async fn close(self) -> io::Result<()> {
-        self.fd.close().await;
-        Ok(())
+        self.fd.close().await
+    }
+}
+
+impl IntoRawFd for File {
+    // Consumes this object, returning the raw underlying file descriptor.
+    // Since all in-flight operations hold a reference to &self, the type-checker
+    // will ensure that there are no in-flight operations when this method is
+    // called.
+    fn into_raw_fd(self) -> RawFd {
+        // This should never panic.
+        self.fd.into_raw_fd()
     }
 }
 
@@ -863,14 +886,14 @@ impl FromRawFd for File {
 
 impl AsRawFd for File {
     fn as_raw_fd(&self) -> RawFd {
-        self.fd.raw_fd()
+        self.fd.as_raw_fd()
     }
 }
 
 impl fmt::Debug for File {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("File")
-            .field("fd", &self.fd.raw_fd())
+            .field("fd", &self.fd.as_raw_fd())
             .finish()
     }
 }

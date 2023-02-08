@@ -1,7 +1,6 @@
 mod accept;
 
 mod close;
-pub(crate) use close::Close;
 
 mod connect;
 
@@ -49,3 +48,5 @@ mod write;
 mod write_fixed;
 
 mod writev;
+
+mod uring_cmd;
